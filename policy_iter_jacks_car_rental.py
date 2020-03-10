@@ -64,7 +64,7 @@ def expected_reward(state, action):
     moving_cost = reward_for_moving * action
     reward = reward + moving_cost
 
-    # All possible state
+    # All possible state after taking the action
     # sum of event happen from 0 times to 9 times is > 0.99 so let's just assume it cover all case.
 
     for rent_loc1 in range(10):
@@ -83,18 +83,22 @@ def expected_reward(state, action):
                     # outer max to prevent car number to be less than 0
 
                     # Assuming there's always car in the market to be return...
+                    # And bad naming...
+                    # original state -> new (intermediate state) -> transit to the new (final) state (taking env repsonse into account)
                     # This is not so accurate tho, but than the state should take number of car on the market as consideration
 
-                    new_state_loc1 = int(max(min(new_state_loc1 - valid_rent_loc1 + return_loc1, max_car), 0))
-                    new_state_loc2 = int(max(min(new_state_loc2 - valid_rent_loc2 + return_loc1, max_car), 0))
+                    next_state_loc1 = int(max(min(new_state_loc1 - valid_rent_loc1 + return_loc1, max_car), 0))
+                    next_state_loc2 = int(max(min(new_state_loc2 - valid_rent_loc2 + return_loc1, max_car), 0))
 
                     # cumulate the updated expected base on bellman equation
-                    total_prop = get_prob_poisson(location1_avg_request,rent_loc1) * \
+                    total_prop = get_prob_poisson(location1_avg_request, rent_loc1) * \
                                  get_prob_poisson(location2_avg_request, rent_loc2) * \
                                  get_prob_poisson(location1_avg_return, return_loc1) * \
                                  get_prob_poisson(location2_avg_return, return_loc2)
 
-                    reward = reward + total_prop * (credit + discount_factor * state_value_func[new_state_loc1][new_state_loc2])
+                    reward = reward + total_prop * (credit + discount_factor * state_value_func[next_state_loc1][next_state_loc2])
+                    #print("rent1 {} return1 {} rent2 {} return 2 {} P: {} : Reward {}".format(rent_loc1, return_loc1, rent_loc2, return_loc2, total_prop, reward))
+
 
     return reward
 
@@ -140,7 +144,7 @@ def policy_improvement():
         # +1 to accommodate the range() offset
         min_action = -min(index[1], 5)
         max_action = min(index[0]+1, 5+1)
-        for possible_action in range(min_action,max_action):
+        for possible_action in range(min_action, max_action):
             new_q = expected_reward([index[0], index[1]], possible_action)
             if index[0] == 10:
                 test = None
