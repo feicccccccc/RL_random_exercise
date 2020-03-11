@@ -6,7 +6,7 @@ location1_avg_request = 3
 location1_avg_return = 3
 location2_avg_request = 4
 location2_avg_return = 2
-accuracy = 0.1
+accuracy = 50
 reward_for_rental = 10
 reward_for_moving = -2
 max_car = 20
@@ -31,7 +31,7 @@ def get_prob_poisson(avg, n):
     :param n: number of time
     :return: probability
     """
-    return np.power(avg, n) / np.math.factorial(n) * np.exp((-avg))
+    return np.power(avg, n) * np.exp((-avg)) / np.math.factorial(n)
 
 
 prop_sum = 0
@@ -61,7 +61,7 @@ def expected_reward(state, action):
 
     # (negative) reward to move cars
     # assuming moving car will generate cost no matter success or not
-    moving_cost = reward_for_moving * action
+    moving_cost = reward_for_moving * abs(action)
     reward = reward + moving_cost
 
     # All possible state after taking the action
@@ -72,8 +72,8 @@ def expected_reward(state, action):
             for rent_loc2 in range(10):
                 for return_loc2 in range(10):
                     # possible request
-                    valid_rent_loc1 = min(rent_loc1, state[0])
-                    valid_rent_loc2 = min(rent_loc2, state[1])
+                    valid_rent_loc1 = min(rent_loc1, new_state_loc1)
+                    valid_rent_loc2 = min(rent_loc2, new_state_loc2)
 
                     credit = (valid_rent_loc1 + valid_rent_loc2) * reward_for_rental
 
@@ -111,17 +111,18 @@ def policy_evaluation():
     while True:
 
         error = 0
-        old_state_value_func = state_value_func
 
         for index, x in np.ndenumerate(state_value_func):
             #print("(Loc1 car, Loc2 car): {}, Value function: {}".format(index, x))
             print(".", end="")
 
-            # Get the pro
+            old_value_func = state_value_func[index[0]][index[1]]
+
+            # Update the value function
             state_value_func[index[0]][index[1]] = expected_reward([index[0], index[1]], car_to_return[index[0]][index[1]])
 
-            error = max(error, abs(state_value_func[index[0], index[1]] - old_state_value_func[index[0]][index[1]]))
-        print("Current Max error in Value func: {}".format(error))
+            error = max(error, abs(state_value_func[index[0], index[1]] - old_value_func))
+        print("\nCurrent Max error in Value func: {}".format(error))
         if error < accuracy:
             break
 
@@ -158,10 +159,10 @@ def policy_improvement():
 
         if car_to_return[index[0]][index[1]] != old_action:
             policy_stable = False
+    return policy_stable
 
-
+iter = 0
 while True:
-    iter = 0
     policy_evaluation()
     print("Policy Eva complete at iter {}".format(iter))
     print(state_value_func)
